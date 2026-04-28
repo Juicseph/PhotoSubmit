@@ -337,7 +337,21 @@ footer { background: #0d0004; padding: 2.5rem; text-align: center; border-top: 1
     <button class="filter-btn" onclick="setFilter(this)">2010s</button>
     <button class="filter-btn" onclick="setFilter(this)">2020s</button>
   </div>
-  <div class="photo-masonry">
+  <!-- Admin upload area -->
+  <div style="background:rgba(204,0,51,0.05);border:1.5px dashed rgba(204,0,51,0.3);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;cursor:pointer;position:relative;transition:background 0.2s;" id="adminUploadZone" ondragover="event.preventDefault();this.style.background='rgba(204,0,51,0.1)'" ondragleave="this.style.background='rgba(204,0,51,0.05)'" ondrop="handleDrop(event)">
+    <input type="file" id="adminFileInput" accept="image/*" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" onchange="handleFileSelect(this.files)">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;background:rgba(204,0,51,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v10M7 6l3-3 3 3" stroke="#CC0033" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v1a1 1 0 001 1h12a1 1 0 001-1v-1" stroke="#CC0033" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--red-dark);margin-bottom:2px;">Add photos directly to the gallery</div>
+        <div style="font-size:12px;color:var(--muted);font-weight:300;">Click or drag &amp; drop image files here — they'll appear in the gallery below instantly. JPG, PNG, HEIC supported.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="photo-masonry" id="photoMasonry">
     <div class="photo-item" style="background:#2a0a12;">
       <div class="photo-placeholder"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="5" width="24" height="18" rx="3" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><circle cx="14" cy="14" r="5" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/></svg><span style="font-size:10px;color:rgba(255,255,255,0.2);font-weight:300;">2023 MW Championship</span></div>
       <div class="photo-overlay"><div class="photo-overlay-year">2023</div><div class="photo-overlay-cap">Mountain West Championship win over Colorado State</div></div>
@@ -371,12 +385,22 @@ footer { background: #0d0004; padding: 2.5rem; text-align: center; border-top: 1
       <div class="photo-overlay"><div class="photo-overlay-year">1993–96</div><div class="photo-overlay-cap">Tricia Tuley — career kills leader (1,804), digs leader (1,864)</div></div>
     </div>
   </div>
+
+  <!-- Lightbox for uploaded photos -->
+  <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(10,0,4,0.92);z-index:300;align-items:center;justify-content:center;padding:2rem;" onclick="closeLightbox()">
+    <div style="position:relative;max-width:90vw;max-height:90vh;">
+      <img id="lightboxImg" src="" style="max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain;" />
+      <div id="lightboxCaption" style="text-align:center;color:rgba(255,255,255,0.7);font-size:13px;margin-top:10px;font-weight:300;"></div>
+      <button onclick="closeLightbox()" style="position:absolute;top:-14px;right:-14px;background:var(--red);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+  </div>
+
   <div class="upload-banner">
     <div class="ub-text">
-      <h3>Have a photo from your era?</h3>
-      <p>We need photos from every decade — especially the 1970s, 80s, and 90s. Every memory matters.</p>
+      <h3>Want to share photos with the community?</h3>
+      <p>Use the submission form so we can tag, caption, and approve photos for the archive.</p>
     </div>
-    <a href="fresno_vb_photo_submission.html" class="btn-red">Submit a photo</a>
+    <a href="fresno_vb_photo_submission.html" class="btn-red">Submit for the archive</a>
   </div>
 </section>
 
@@ -461,7 +485,7 @@ footer { background: #0d0004; padding: 2.5rem; text-align: center; border-top: 1
       <div class="section-heading">Find your <em>teammates</em></div>
       <div class="section-desc">Search for fellow Bulldogs from across every era.</div>
     </div>
-    <a href="#" class="see-all">Full directory →</a>
+    <button onclick="openFullDirectory()" class="see-all" style="background:none;border:none;cursor:pointer;font-family:inherit;">Full directory →</button>
   </div>
   <div class="alumni-search">
     <input type="text" placeholder="Search by name..." oninput="filterAlumni(this.value)" />
@@ -654,17 +678,167 @@ function filterAlumni(q) {
   const grid = document.getElementById('alumniGrid');
   const filtered = alumniData.filter(a => a.n.toLowerCase().includes(q.toLowerCase()));
   grid.innerHTML = filtered.map(a => `
-    <div class="alumni-card">
+    <div class="alumni-card" onclick="openPlayerModal('${a.n}')">
       <div class="ac-avatar">${a.i.substring(0,2)}</div>
       <div><div class="ac-name">${a.n}</div><div class="ac-pos">${a.p}</div><div class="ac-years">${a.y}</div></div>
+      <div style="margin-left:auto;color:var(--red);font-size:18px;opacity:0.5;">›</div>
     </div>`).join('');
 }
 filterAlumni('');
+
+function openPlayerModal(name) {
+  const a = alumniData.find(x => x.n === name);
+  if (!a) return;
+  document.getElementById('playerModalTitle').textContent = a.n;
+  document.getElementById('playerModalInitials').textContent = a.i.substring(0,2);
+  document.getElementById('playerModalPos').textContent = a.p;
+  document.getElementById('playerModalYears').textContent = a.y;
+  const details = playerDetails[name] || {};
+  document.getElementById('playerModalHt').textContent = details.ht || '—';
+  document.getElementById('playerModalHome').textContent = details.home || '—';
+  document.getElementById('playerModalHighlights').innerHTML = (details.highlights || ['No additional info on file.']).map(h => `<li style="margin-bottom:6px;">${h}</li>`).join('');
+  document.getElementById('playerModal').classList.add('open');
+}
+
+function openFullDirectory() {
+  const modal = document.getElementById('fullDirectoryModal');
+  const grid = document.getElementById('fullDirectoryGrid');
+  grid.innerHTML = alumniData.map(a => `
+    <div class="alumni-card" onclick="closeFull();openPlayerModal('${a.n}')" style="cursor:pointer;">
+      <div class="ac-avatar">${a.i.substring(0,2)}</div>
+      <div><div class="ac-name">${a.n}</div><div class="ac-pos">${a.p}</div><div class="ac-years">${a.y}</div></div>
+      <div style="margin-left:auto;color:var(--red);font-size:18px;opacity:0.5;">›</div>
+    </div>`).join('');
+  modal.classList.add('open');
+}
+function closeFull() {
+  document.getElementById('fullDirectoryModal').classList.remove('open');
+}
 
 function submitConnect() {
   document.getElementById('connectFormInner').style.display = 'none';
   document.getElementById('connectSuccess').style.display = 'block';
 }
+
+// Extended player details from the 2025 media guide
+const playerDetails = {
+  'Addison Haluska': { ht:'6-0', home:'Gilbert, Ariz.', highlights:['2025 MW Preseason Player of the Year','2024 All-Mountain West · 2023 All-MW First Team','Career: 1,036 kills, .228 hit pct, 100 aces','Single-game record: 29 kills vs San Diego St. (10/12/24)','Majoring in Kinesiology – Exercise Science'] },
+  'Ella Rud': { ht:'—', home:'—', highlights:['All-Mountain West 2023 & 2024','2024: 451 kills, 3.67 k/s, 52 aces (team leader)','2023 MW Championship All-Tournament Team','Career stats: 4 seasons at Fresno State'] },
+  'Brooke Cowie': { ht:'—', home:'—', highlights:['2023 Mountain West Tournament MVP','All-Mountain West 2024','2024: 1,209 assists, 9.83 a/s — team leader','2023: 1,253 assists, 9.56 a/s'] },
+  'Dionii Fraga': { ht:'—', home:'—', highlights:['2023 Mountain West Freshman of the Year','2023: 544 digs, 4.15 d/s — program single-season record','2024: 481 digs, 3.91 d/s','All-MW 2023 & 2024'] },
+  'Jenna Legault': { ht:'6-0', home:'Bothell, Wash.', highlights:['2024 MW All-Tournament Team','2023: 300 kills, 2.38 k/s as r-freshman','2024: 227 kills, 20 aces','Career: 527 kills, 600 total points','2021-22 Washington State 4A Player of the Year in high school'] },
+  'Grace Doyle': { ht:'—', home:'—', highlights:['All-Mountain West 2022','Career block assists leader: 408','Career: 5 seasons 2019–2023','MW All-Conference honoree'] },
+  'Kasey Purry': { ht:'—', home:'—', highlights:['2024: 36 block solos, 104 block assists, 140 total (10th all-time single season)','2023: 38 block solos, 126 total blocks','2022: 91 total blocks, All-MW Academic','Middle blocker · led team in blocks 3 straight years'] },
+  'Reagan Leonard': { ht:'—', home:'—', highlights:['All-Mountain West 2019','2018 season: 605 digs — program single-season record','Career: 1,277 digs (6th all-time)','2019 Preseason All-Mountain West'] },
+  'Madelyn Halteman': { ht:'—', home:'—', highlights:['All-Mountain West 2018','2018: 1,285 assists — led team','Career: 3,851 assists (3rd all-time)','Career aces: 136 (tied 4th all-time)'] },
+  'Haile Watson': { ht:'—', home:'—', highlights:['All-Mountain West 2018','Career block assists: 334 (3rd all-time)','2018: 156 total blocks — top 5 single season','2017: 148 total blocks, 1.31 blk/s'] },
+  'Tricia Tuley': { ht:'—', home:'—', highlights:['All-time kills leader: 1,804','All-time digs leader: 1,864','All-WAC First Team 1995','Plays per set records across kills & digs','15-Year All-WAC Team (1993–96)'] },
+  'Diana Nalbandian': { ht:'—', home:'—', highlights:['All-time kills #2: 1,495','Career digs #3: 1,470','All-WAC First Team 1997','AVCA All-District VII First Team 1997','Single-season kills record holder at the time (521 in 1997)'] },
+  'Kristen Fenton': { ht:'—', home:'—', highlights:['Career kills #3: 1,353','All-West Region First Team 2002 & 2003','2003: 568 kills — 2nd all-time single season','2002: All-WAC First Team','2002 WAC All-Tournament Team'] },
+  'Brenda Gregersen': { ht:'—', home:'—', highlights:['All-time assists leader: 5,496','WAC Freshman of the Year 1992','Single-season assists record: 1,591 (1994)','Career assists per set: 12.30 (program record)','All-WAC 1992–95'] },
+  'Ruth Lawanson': { ht:'5-8', home:'Ibadan, Nigeria', highlights:["Program's only volleyball All-American (1984)",'No. 15 retired — first female athlete at Fresno State to have jersey retired','1992 Olympic bronze medal with U.S. National Team','Career kills at the time: program record','1984-85 Fresno State Female Athlete of the Year','Ohio State Hall of Fame inductee (2001)'] },
+  'Paola Paz-Soldan': { ht:'—', home:'—', highlights:['Single-season kills record: 630 (1991) — still stands','Big West Freshman of the Year 1991','All-Big West First Team 1991','Kills per set: 5.60 — #1 all-time','AVCA All-Northwest Region First Team'] },
+  'Suzie Regul': { ht:'—', home:'—', highlights:['Career kills #5: 1,257','Career block assists #8: 301','All-Big West Hon. Mention 1991','Single-season blocks record 1992: 175 (2nd all-time)','U.S. National Team 1993–94'] },
+  'Andrea Radmilovich': { ht:'—', home:'—', highlights:['Career aces leader: 209','Career digs #4: 1,450','Single-season aces records: 68 (1992), 63 (1991)','All-Big West Hon. Mention 1990','All-WAC Second Team 1992'] },
+  'Maggie Eppright': { ht:'—', home:'—', highlights:['Career digs #2: 1,788','All-Mountain West 2015','2015: 573 digs, 4.82 d/s — 2nd all-time single season','Played 459 sets — 4th all-time'] },
+  'Korrin Wild': { ht:'—', home:'—', highlights:['All-WAC First Team 2011','All-Mountain West 2013','Career aces: 136 (tied 4th all-time)','Career kills #6: 1,256','Career digs #8: 1,203'] },
+};
+
+// Photo upload handlers
+function handleFileSelect(files) {
+  Array.from(files).forEach(file => addPhotoToGallery(file));
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('adminUploadZone').style.background = 'rgba(204,0,51,0.05)';
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(file => addPhotoToGallery(file));
+}
+function addPhotoToGallery(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const url = e.target.result;
+    const label = prompt('Add a caption for "' + file.name + '" (optional):') || file.name.replace(/\.[^.]+$/, '');
+    const masonry = document.getElementById('photoMasonry');
+    const div = document.createElement('div');
+    div.className = 'photo-item';
+    div.style.cssText = 'background:#111;overflow:hidden;';
+    div.innerHTML = `
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+      <div class="photo-overlay" style="opacity:0;">
+        <div class="photo-overlay-year">Uploaded</div>
+        <div class="photo-overlay-cap">${label}</div>
+      </div>`;
+    div.addEventListener('mouseenter', () => div.querySelector('.photo-overlay').style.opacity = '1');
+    div.addEventListener('mouseleave', () => div.querySelector('.photo-overlay').style.opacity = '0');
+    div.addEventListener('click', () => openLightbox(url, label));
+    masonry.insertBefore(div, masonry.firstChild);
+  };
+  reader.readAsDataURL(file);
+}
+function openLightbox(src, cap) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightboxCaption').textContent = cap;
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+function filterFull(q) {
+  const grid = document.getElementById('fullDirectoryGrid');
+  const filtered = alumniData.filter(a => a.n.toLowerCase().includes(q.toLowerCase()));
+  grid.innerHTML = filtered.map(a => `
+    <div class="alumni-card" onclick="closeFull();openPlayerModal('${a.n}')" style="cursor:pointer;">
+      <div class="ac-avatar">${a.i.substring(0,2)}</div>
+      <div><div class="ac-name">${a.n}</div><div class="ac-pos">${a.p}</div><div class="ac-years">${a.y}</div></div>
+      <div style="margin-left:auto;color:var(--red);font-size:18px;opacity:0.5;">›</div>
+    </div>`).join('');
+}
+
 </script>
+<!-- PLAYER DETAIL MODAL -->
+<div class="modal-overlay" id="playerModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div id="playerModalInitials" style="width:42px;height:42px;border-radius:50%;background:rgba(204,0,51,0.3);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;"></div>
+        <div>
+          <div class="modal-title" id="playerModalTitle"></div>
+          <div id="playerModalYears" style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px;"></div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('playerModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;">
+        <div style="background:var(--cream);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Position</div>
+          <div id="playerModalPos" style="font-size:13px;font-weight:500;color:var(--ink);"></div>
+        </div>
+        <div style="background:var(--cream);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Hometown</div>
+          <div id="playerModalHome" style="font-size:13px;font-weight:500;color:var(--ink);"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Career highlights</div>
+      <ul id="playerModalHighlights" style="font-size:13px;color:var(--ink);line-height:1.6;padding-left:16px;"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- FULL DIRECTORY MODAL -->
+<div class="modal-overlay" id="fullDirectoryModal" onclick="if(event.target===this)this.classList.remove('open')" style="align-items:flex-start;padding-top:60px;">
+  <div style="background:var(--cream);border-radius:20px;width:100%;max-width:800px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;animation:fadeUp 0.3s ease both;">
+    <div style="background:var(--red-deep);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;color:#fff;font-weight:700;">Full alumni directory</div>
+      <button class="modal-close" onclick="closeFull()">✕</button>
+    </div>
+    <div style="padding:1.25rem 2rem;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <input type="text" placeholder="Search by name..." oninput="filterFull(this.value)" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:#fff;outline:none;" />
+    </div>
+    <div id="fullDirectoryGrid" style="overflow-y:auto;padding:1.25rem 2rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
+  </div>
+</div>
+
 </body>
 </html>
